@@ -1,0 +1,36 @@
+FROM node:18-alpine
+
+# Create app directory
+WORKDIR /usr/src/app
+
+# Install Chromium and necessary dependencies
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    libx11 \
+    freetype \
+    ttf-liberation
+
+# Set Puppeteer environment variables
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
+ENV PUPPETEER_EXECUTABLE_PATH /usr/bin/chromium-browser
+
+# Set environment variables
+ENV NODE_ENV development
+ENV DEBUG $DEBUG
+
+RUN chmod 2777 "/usr/src/app"
+
+COPY . /usr/src/app
+
+# Clean yarn cache and install dependencies
+RUN rm -rf yarn.lock
+RUN yarn install --pure-lockfile
+RUN yarn env local
+RUN rm -rf env
+
+# Expose port for the development server
+EXPOSE 3030
+
+# Command to run the app in development mode
+CMD ["yarn", "dev", "--port", "3030"]

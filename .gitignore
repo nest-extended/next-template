@@ -1,0 +1,9 @@
+.idea
+dist
+node_modules
+
+*.env
+!.env.example
+!.env
+
+load-testing

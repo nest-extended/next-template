@@ -1,0 +1,5 @@
+branch_name=$(git rev-parse --abbrev-ref HEAD)
+yarn format
+if [ "$branch_name" = "dev" ]; then
+  yarn env dev
+fi
