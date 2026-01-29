@@ -10,6 +10,7 @@ import { Request } from 'express';
 import { IS_PUBLIC_KEY } from './decorators/public.decorator';
 import { UsersService } from '../users/users.service';
 import { jwtConstants } from './constants/jwt-constants';
+import { ClsService } from 'nestjs-cls';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -17,7 +18,8 @@ export class AuthGuard implements CanActivate {
     private usersService: UsersService,
     private jwtService: JwtService,
     private reflector: Reflector,
-  ) {}
+    private cls: ClsService,
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -43,6 +45,8 @@ export class AuthGuard implements CanActivate {
       // so that we can access it in our route handlers
       if (user) {
         request['user'] = user;
+        // Store user in CLS for access anywhere in the request lifecycle
+        this.cls.set('user', user);
         return true;
       }
     } catch {
@@ -56,3 +60,4 @@ export class AuthGuard implements CanActivate {
     return type === 'Bearer' ? token : undefined;
   }
 }
+

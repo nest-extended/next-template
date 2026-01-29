@@ -7,6 +7,7 @@ import { NestServiceOptions } from '../types/ServiceOptions';
 import { nestify } from '../common/nestify';
 import { RootFilterQuery } from 'mongoose';
 import { SoftDeleteConfig } from '../types/nest-extended.config';
+import { getCurrentUser } from '../common/cls.helper';
 
 /**
  * Default soft delete configuration.
@@ -181,7 +182,7 @@ export class NestService<M, D> {
     async _remove(
         id: string | null,
         query: Record<string, any> = {},
-        user: any,
+        user?: any,
     ): Promise<D | D[] | null> {
         const searchQuery: FilterQuery<Record<any, any>> = id
             ? { _id: id, ...rawQuery(query) }
@@ -190,8 +191,10 @@ export class NestService<M, D> {
         const data = await this._get(id, query);
 
         if (this.options.softDelete) {
+            // Get user from parameter or fallback to CLS context
+            const currentUser = user ?? getCurrentUser();
             // Soft delete: mark as deleted using configured getData
-            const softDeleteData = this.softDeleteConfig.getData(user);
+            const softDeleteData = this.softDeleteConfig.getData(currentUser);
             await this._patch(id, softDeleteData, searchQuery);
             return data;
         }
