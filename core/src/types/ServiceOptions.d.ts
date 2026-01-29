@@ -15,7 +15,8 @@ export interface ServiceOptions<T> {
     ): Promise<any>;
 }
 
-export type NestServiceOptions = {
+export type NestServiceOptions = Partial<{
     multi: boolean;
     softDelete: boolean;
-};
+    pagination: boolean;
+}>;

@@ -11,49 +11,49 @@ import { Users } from 'src/schemas/users.schema';
 export class NestService<M, D> {
     private model: Model<M>;
     private options: NestServiceOptions;
-    constructor(model: Model<M>, options?: NestServiceOptions) {
+    constructor(model: Model<M>, options: NestServiceOptions = {}) {
         this.model = model;
-        this.options = options || {
+        this.options = {
             multi: false,
-            softDelete: false,
+            softDelete: true,
+            pagination: true,
+            ...options,
         };
     }
 
     async _find<P extends boolean = true>(
         query: Record<string, any> = {},
         findOptions: {
-            handleSoftDelete?: boolean;
             pagination?: P;
         } = {
-                handleSoftDelete: true,
-                pagination: true as P,
+                pagination: this.options.pagination as P,
             },
     ): Promise<P extends true ? PaginatedResponse<D> : D[]> {
-        if (!findOptions.handleSoftDelete) {
-            throw new BadRequestException(
-                'findOptions.handleSoftDelete not provided in _find.',
-            );
+        // Apply soft delete filter if enabled
+        if (this.options.softDelete) {
+            query[options.deleteKey || 'deleted'] = {
+                $ne: true,
+            };
         }
-        query[options.deleteKey || 'deleted'] = {
-            $ne: true,
-        };
 
         const filters = assignFilters({}, query, FILTERS, {});
         const searchQuery = rawQuery(query);
-        const isPaginationDisabled = findOptions.pagination === false;
+        const isPaginationEnabled = findOptions.pagination ?? this.options.pagination;
 
         const q = this.model.find(searchQuery);
-        nestify(q, filters, options, isPaginationDisabled);
-        if (isPaginationDisabled) {
+        nestify(q, filters, options, !isPaginationEnabled);
+
+        if (!isPaginationEnabled) {
             return (await q.exec()) as P extends true ? PaginatedResponse<D> : D[];
         }
 
+        const countQuery = this.options.softDelete
+            ? { [options.deleteKey || 'deleted']: { $ne: true }, ...searchQuery }
+            : searchQuery;
+
         const [data, total] = await Promise.all([
             q.exec(),
-            this.model.countDocuments({
-                [options.deleteKey || 'deleted']: { $ne: true },
-                ...searchQuery,
-            }),
+            this.model.countDocuments(countQuery),
         ]);
 
         return {
@@ -64,29 +64,28 @@ export class NestService<M, D> {
         } as P extends true ? PaginatedResponse<D> : D[];
     }
 
-    async _create(
-        data: Partial<D> | Partial<D>[],
-        needsMulti: boolean | undefined = undefined,
-    ): Promise<D | D[]> {
-        const multi = needsMulti !== undefined ? needsMulti : options.multi;
+    async _create(data: Partial<D>): Promise<D>;
+    async _create(data: Partial<D>[]): Promise<D[]>;
+    async _create(data: Partial<D> | Partial<D>[]): Promise<D | D[]> {
+        const multi = this.options.multi;
 
         if (multi) {
-            if (!Array.isArray(data)) {
-                throw new BadRequestException(
-                    'Bulk creation requires an array of key value pairs.',
-                );
+            // When multi is enabled, handle both array and single object
+            if (Array.isArray(data)) {
+                // @ts-expect-error - mongoose types issue
+                return this.model.insertMany(data, { ordered: false });
             }
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-expect-error
-            return this.model.insertMany(data, { ordered: false });
+            // @ts-expect-error - mongoose types issue
+            return this.model.create(data);
         }
+
+        // When multi is disabled, only accept single object
         if (Array.isArray(data)) {
             throw new BadRequestException(
-                'Single creation expects a single user object, not an array.',
+                'Bulk creation is not enabled. Set multi: true in service options to allow array input.',
             );
         }
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
+        // @ts-expect-error - mongoose types issue
         return this.model.create(data);
     }
 
@@ -94,18 +93,13 @@ export class NestService<M, D> {
         id: string | null,
         data: Record<any, any>,
         query: Record<string, any> = {},
-        patchOptions = {
-            handleSoftDelete: true,
-        },
     ): Promise<D | D[] | null> {
-        if (!patchOptions.handleSoftDelete) {
-            throw new BadRequestException(
-                'patchOptions.handleSoftDelete not provided in _patch.',
-            );
+        // Apply soft delete filter if enabled
+        if (this.options.softDelete) {
+            query[options.deleteKey || 'deleted'] = {
+                $ne: true,
+            };
         }
-        query[options.deleteKey || 'deleted'] = {
-            $ne: true,
-        };
 
         const filters = assignFilters({}, query, FILTERS, {});
         const searchQuery: FilterQuery<D> = id
@@ -113,23 +107,19 @@ export class NestService<M, D> {
             : rawQuery(query);
 
         const isSingleUpdate = Boolean(id);
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
+        // @ts-expect-error - internal method call
         const q = this._getOrFind(isSingleUpdate, searchQuery, data);
 
         if (isSingleUpdate) {
             nestify(q, filters, options, isSingleUpdate);
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-expect-error
+            // @ts-expect-error - mongoose query exec
             return q.exec();
         }
         const result = await q.exec();
 
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
+        // @ts-expect-error - updateMany result type
         if (result.modifiedCount > 0) {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-expect-error
+            // @ts-expect-error - mongoose find return type
             return this.model.find(searchQuery).exec();
         }
         return [];
@@ -138,19 +128,13 @@ export class NestService<M, D> {
     async _get(
         id: string,
         query: Record<string, any> = {},
-        getOptions = {
-            handleSoftDelete: true,
-        },
-    ): Promise<D | D[]> {
-        if (!getOptions.handleSoftDelete) {
-            throw new BadRequestException(
-                'getOptions.handleSoftDelete not provided in _get.',
-            );
+    ): Promise<D | null> {
+        // Apply soft delete filter if enabled
+        if (this.options.softDelete) {
+            query[options.deleteKey || 'deleted'] = {
+                $ne: true,
+            };
         }
-
-        query[options.deleteKey || 'deleted'] = {
-            $ne: true,
-        };
 
         const filters = assignFilters({}, query, FILTERS, {});
         const searchQuery: FilterQuery<Record<any, any>> = {
@@ -161,8 +145,8 @@ export class NestService<M, D> {
         const q = this.model.findOne(searchQuery);
         const isSingleOperation = true;
         nestify(q, filters, options, isSingleOperation);
-        // @ts-expect-error
-        return (await q.exec()) || [];
+        // @ts-expect-error - mongoose findOne return type
+        return (await q.exec()) || null;
     }
 
     private _getOrFind(
@@ -180,22 +164,15 @@ export class NestService<M, D> {
         id: string | null,
         query: Record<string, any> = {},
         user: Users,
-        removeOptions = {
-            handleSoftDelete: true,
-        },
-    ): Promise<D | D[]> {
-        if (!removeOptions.handleSoftDelete) {
-            throw new BadRequestException(
-                'removeOptions.handleSoftDelete not provided in _remove.',
-            );
-        }
+    ): Promise<D | D[] | null> {
         const searchQuery: FilterQuery<Record<any, any>> = id
             ? { _id: id, ...rawQuery(query) }
             : rawQuery(query);
 
         const data = await this._get(id, query);
 
-        if (removeOptions.handleSoftDelete) {
+        if (this.options.softDelete) {
+            // Soft delete: mark as deleted
             await this._patch(
                 id,
                 {
@@ -207,6 +184,8 @@ export class NestService<M, D> {
             );
             return data;
         }
+
+        // Hard delete: actually remove from database
         if (id) {
             await this.model.deleteOne(searchQuery).exec()
         } else {
