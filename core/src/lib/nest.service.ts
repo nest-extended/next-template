@@ -6,19 +6,49 @@ import options from '../common/options';
 import { NestServiceOptions } from '../types/ServiceOptions';
 import { nestify } from '../common/nestify';
 import { RootFilterQuery } from 'mongoose';
-import { Users } from 'src/schemas/users.schema';
+import { SoftDeleteConfig } from '../types/nest-extended.config';
+
+/**
+ * Default soft delete configuration.
+ * Used when no custom config is provided via NestExtendedModule.forRoot()
+ */
+const defaultSoftDeleteConfig: SoftDeleteConfig = {
+    getQuery: () => ({ [options.deleteKey || 'deleted']: { $ne: true } }),
+    getData: (user: any) => ({
+        deleted: true,
+        deletedBy: user?._id,
+        deletedAt: new Date(),
+    }),
+};
 
 export class NestService<M, D> {
     private model: Model<M>;
     private options: NestServiceOptions;
-    constructor(model: Model<M>, options: NestServiceOptions = {}) {
+    private softDeleteConfig: SoftDeleteConfig;
+
+    constructor(
+        model: Model<M>,
+        serviceOptions: NestServiceOptions = {},
+        softDeleteConfig?: SoftDeleteConfig,
+    ) {
         this.model = model;
         this.options = {
             multi: false,
             softDelete: true,
             pagination: true,
-            ...options,
+            ...serviceOptions,
         };
+        this.softDeleteConfig = softDeleteConfig || defaultSoftDeleteConfig;
+    }
+
+    /**
+     * Apply soft delete query filter if soft delete is enabled
+     */
+    private applySoftDeleteFilter(query: Record<string, any>): void {
+        if (this.options.softDelete) {
+            const softDeleteQuery = this.softDeleteConfig.getQuery();
+            Object.assign(query, softDeleteQuery);
+        }
     }
 
     async _find<P extends boolean = true>(
@@ -30,11 +60,7 @@ export class NestService<M, D> {
             },
     ): Promise<P extends true ? PaginatedResponse<D> : D[]> {
         // Apply soft delete filter if enabled
-        if (this.options.softDelete) {
-            query[options.deleteKey || 'deleted'] = {
-                $ne: true,
-            };
-        }
+        this.applySoftDeleteFilter(query);
 
         const filters = assignFilters({}, query, FILTERS, {});
         const searchQuery = rawQuery(query);
@@ -48,7 +74,7 @@ export class NestService<M, D> {
         }
 
         const countQuery = this.options.softDelete
-            ? { [options.deleteKey || 'deleted']: { $ne: true }, ...searchQuery }
+            ? { ...this.softDeleteConfig.getQuery(), ...searchQuery }
             : searchQuery;
 
         const [data, total] = await Promise.all([
@@ -95,11 +121,7 @@ export class NestService<M, D> {
         query: Record<string, any> = {},
     ): Promise<D | D[] | null> {
         // Apply soft delete filter if enabled
-        if (this.options.softDelete) {
-            query[options.deleteKey || 'deleted'] = {
-                $ne: true,
-            };
-        }
+        this.applySoftDeleteFilter(query);
 
         const filters = assignFilters({}, query, FILTERS, {});
         const searchQuery: FilterQuery<D> = id
@@ -130,11 +152,7 @@ export class NestService<M, D> {
         query: Record<string, any> = {},
     ): Promise<D | null> {
         // Apply soft delete filter if enabled
-        if (this.options.softDelete) {
-            query[options.deleteKey || 'deleted'] = {
-                $ne: true,
-            };
-        }
+        this.applySoftDeleteFilter(query);
 
         const filters = assignFilters({}, query, FILTERS, {});
         const searchQuery: FilterQuery<Record<any, any>> = {
@@ -163,7 +181,7 @@ export class NestService<M, D> {
     async _remove(
         id: string | null,
         query: Record<string, any> = {},
-        user: Users,
+        user: any,
     ): Promise<D | D[] | null> {
         const searchQuery: FilterQuery<Record<any, any>> = id
             ? { _id: id, ...rawQuery(query) }
@@ -172,16 +190,9 @@ export class NestService<M, D> {
         const data = await this._get(id, query);
 
         if (this.options.softDelete) {
-            // Soft delete: mark as deleted
-            await this._patch(
-                id,
-                {
-                    deleted: true,
-                    deletedBy: user._id,
-                    deletedAt: new Date(),
-                },
-                searchQuery,
-            );
+            // Soft delete: mark as deleted using configured getData
+            const softDeleteData = this.softDeleteConfig.getData(user);
+            await this._patch(id, softDeleteData, searchQuery);
             return data;
         }
 
