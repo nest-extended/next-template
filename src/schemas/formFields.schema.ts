@@ -18,9 +18,7 @@ export class FormFields {
 
   @Prop({
     default: 'user',
-    enum: [
-      'user',
-    ],
+    enum: ['user'],
   })
   module: string;
 

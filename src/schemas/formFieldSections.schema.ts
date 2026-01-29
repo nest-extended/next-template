@@ -21,9 +21,7 @@ export class FormFieldSections {
 
   @Prop({
     default: 'user',
-    enum: [
-      'user',
-    ],
+    enum: ['user'],
   })
   module: string;
 
