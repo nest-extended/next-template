@@ -23,18 +23,18 @@ const Name = argArray.join('');
 const name = Name[0].toLowerCase() + Name.slice(1);
 
 createFileWithContent(`src/schemas/${name}.schema.ts`, getSchema(Name));
-createFileWithContent(`src/apis/${name}/${name}.module.ts`, getModule(Name, name));
-createFileWithContent(`src/apis/${name}/${name}.service.ts`, getService(Name, name));
+createFileWithContent(`src/services/${name}/${name}.module.ts`, getModule(Name, name));
+createFileWithContent(`src/services/${name}/${name}.service.ts`, getService(Name, name));
 createFileWithContent(
-  `src/apis/${name}/${name}.controller.ts`,
+  `src/services/${name}/${name}.controller.ts`,
   getController(Name, name, arg),
 );
-createFileWithContent(`src/apis/${name}/dto/${name}.dto.ts`, getDto(Name));
+createFileWithContent(`src/services/${name}/dto/${name}.dto.ts`, getDto(Name));
 createFileWithContent(
-  `src/apis/${name}/${name}.service.spec.ts`,
+  `src/services/${name}/${name}.service.spec.ts`,
   getServiceSpec(Name, name),
 );
 createFileWithContent(
-  `src/apis/${name}/${name}.controller.spec.ts`,
+  `src/services/${name}/${name}.controller.spec.ts`,
   getControllerSpec(Name, name),
 );

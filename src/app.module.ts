@@ -7,16 +7,16 @@ import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ConfigModule } from '@nestjs/config';
 import { config } from 'dotenv';
-import { EventsModule } from './apis/events/events.module';
-import { FileUploadModule } from './apis/file-upload/file-upload.module';
+import { EventsModule } from './services/events/events.module';
+import { FileUploadModule } from './services/file-upload/file-upload.module';
 import { NullResponseInterceptor } from './interceptors/null-response.interceptor';
-import { VersionModule } from './apis/version/version.module';
-import { UsersModule } from './apis/users/users.module';
-import { AuthModule } from './apis/auth/auth.module';
+import { VersionModule } from './services/version/version.module';
+import { UsersModule } from './services/users/users.module';
+import { AuthModule } from './services/auth/auth.module';
 import { ListenerModule } from './listeners/listeners.module';
-import { FormFieldsModule } from './apis/formFields/formFields.module';
-import { FormFieldSectionsModule } from './apis/formFieldSections/formFieldSections.module';
-import { GetFormsModule } from './apis/getForms/getForms.module';
+import { FormFieldsModule } from './services/formFields/formFields.module';
+import { FormFieldSectionsModule } from './services/formFieldSections/formFieldSections.module';
+import { GetFormsModule } from './services/getForms/getForms.module';
 
 config();
 @Module({
@@ -50,4 +50,4 @@ config();
   ],
   controllers: [AppController],
 })
-export class AppModule {}
+export class AppModule { }

@@ -4,7 +4,7 @@ import { HydratedDocument, Types } from 'mongoose';
 import { Users } from './users.schema';
 import EnsureObjectId from '@nest-extended/core/common/ensureObjectId';
 import { FormFieldSections } from './formFieldSections.schema';
-import { FormFieldTypesList } from 'src/apis/formFields/constants/form-fields-types';
+import { FormFieldTypesList } from 'src/services/formFields/constants/form-fields-types';
 
 export type FormFieldsDocument = HydratedDocument<FormFields>;
 
