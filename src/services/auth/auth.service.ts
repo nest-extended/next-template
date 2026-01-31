@@ -9,23 +9,26 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   async signInLocal(email: string, pass: string): Promise<any> {
-    const [user] = (await this.usersService._find({
-      email,
-      $limit: 1,
-      $select: [
-        '_id',
-        'firstName',
-        'lastName',
-        'userName',
-        'email',
-        'password',
-        'createdAt',
-        'updatedAt',
-      ],
-    }, { pagination: false })) as Users[];
+    const [user] = (await this.usersService._find(
+      {
+        email,
+        $limit: 1,
+        $select: [
+          '_id',
+          'firstName',
+          'lastName',
+          'userName',
+          'email',
+          'password',
+          'createdAt',
+          'updatedAt',
+        ],
+      },
+      { pagination: false },
+    )) as Users[];
 
     if (!user) throw new UnauthorizedException();
 
