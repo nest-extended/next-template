@@ -8,6 +8,7 @@ const getServiceSpec = require('./service.spec.js');
 const getControllerSpec = require('./controller.spec.js');
 const fs = require('fs');
 const path = require('path');
+const inquirer = require('inquirer');
 
 const arg = process.argv?.[2];
 
@@ -92,22 +93,46 @@ function updateAppModule(Name, name) {
   }
 }
 
-createFileWithContent(`src/schemas/${name}.schema.ts`, getSchema(Name));
-createFileWithContent(`src/services/${name}/${name}.module.ts`, getModule(Name, name));
-createFileWithContent(`src/services/${name}/${name}.service.ts`, getService(Name, name));
-createFileWithContent(
-  `src/services/${name}/${name}.controller.ts`,
-  getController(Name, name, arg),
-);
-createFileWithContent(`src/services/${name}/dto/${name}.dto.ts`, getDto(Name));
-createFileWithContent(
-  `src/services/${name}/${name}.service.spec.ts`,
-  getServiceSpec(Name, name),
-);
-createFileWithContent(
-  `src/services/${name}/${name}.controller.spec.ts`,
-  getControllerSpec(Name, name),
-);
+// Main async function to handle prompts and file generation
+async function main() {
+  // Prompt for soft delete option
+  const answers = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'enableSoftDelete',
+      message: 'Enable soft delete for this service?',
+      choices: [
+        { name: 'Yes', value: true },
+        { name: 'No', value: false },
+      ],
+      default: 0, // Yes is selected by default (index 0)
+    },
+  ]);
 
-// Update app.module.ts with the new module
-updateAppModule(Name, name);
+  const { enableSoftDelete } = answers;
+
+  createFileWithContent(`src/schemas/${name}.schema.ts`, getSchema(Name, enableSoftDelete));
+  createFileWithContent(`src/services/${name}/${name}.module.ts`, getModule(Name, name));
+  createFileWithContent(`src/services/${name}/${name}.service.ts`, getService(Name, name, enableSoftDelete));
+  createFileWithContent(
+    `src/services/${name}/${name}.controller.ts`,
+    getController(Name, name, arg),
+  );
+  createFileWithContent(`src/services/${name}/dto/${name}.dto.ts`, getDto(Name));
+  createFileWithContent(
+    `src/services/${name}/${name}.service.spec.ts`,
+    getServiceSpec(Name, name),
+  );
+  createFileWithContent(
+    `src/services/${name}/${name}.controller.spec.ts`,
+    getControllerSpec(Name, name),
+  );
+
+  // Update app.module.ts with the new module
+  updateAppModule(Name, name);
+}
+
+main().catch((err) => {
+  console.error('Error:', err.message);
+  process.exit(1);
+});
