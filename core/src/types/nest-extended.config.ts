@@ -1,3 +1,6 @@
+import { ConfigModuleOptions } from '@nestjs/config';
+import { ClsModuleOptions } from 'nestjs-cls';
+
 /**
  * Configuration interface for NestExtended module.
  * This allows the application to configure soft delete behavior
@@ -24,6 +27,20 @@ export interface NestExtendedConfig {
      * If not provided, default soft delete behavior is used.
      */
     softDelete?: SoftDeleteConfig;
+
+    /**
+     * ClsModule configuration.
+     * If softDelete is configured and clsModule is not provided,
+     * default CLS config will be used: { global: true, middleware: { mount: true } }
+     */
+    clsModule?: ClsModuleOptions;
+
+    /**
+     * ConfigModule configuration.
+     * Default: { envFilePath: ['.env'], isGlobal: true }
+     * If not provided, default config will be used.
+     */
+    config?: ConfigModuleOptions;
 }
 
 /**

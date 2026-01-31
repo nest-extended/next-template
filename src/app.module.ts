@@ -5,7 +5,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { ConfigModule } from '@nestjs/config';
 import { config } from 'dotenv';
 import { EventsModule } from './services/events/events.module';
 import { FileUploadModule } from './services/file-upload/file-upload.module';
@@ -18,19 +17,10 @@ import { FormFieldsModule } from './services/formFields/formFields.module';
 import { FormFieldSectionsModule } from './services/formFieldSections/formFieldSections.module';
 import { GetFormsModule } from './services/getForms/getForms.module';
 import { NestExtendedModule } from '@nest-extended/core/lib/nest-extended.module';
-import { ClsModule } from 'nestjs-cls';
 
 config();
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      envFilePath: ['.env'],
-      isGlobal: true,
-    }),
-    ClsModule.forRoot({
-      global: true,
-      middleware: { mount: true },
-    }),
     NestExtendedModule.forRoot({
       softDelete: {
         getQuery: () => ({ deleted: { $ne: true } }),
@@ -40,6 +30,10 @@ config();
           deletedAt: new Date(),
         }),
       },
+      // Optional: Override ClsModule config (defaults: { global: true, middleware: { mount: true } })
+      // clsModule: { global: true, middleware: { mount: true } },
+      // Optional: Override ConfigModule config (defaults: { envFilePath: ['.env'], isGlobal: true })
+      // config: { envFilePath: ['.env'], isGlobal: true },
     }),
     AuthModule,
     EventEmitterModule.forRoot(),
@@ -66,4 +60,4 @@ config();
   ],
   controllers: [AppController],
 })
-export class AppModule {}
+export class AppModule { }
