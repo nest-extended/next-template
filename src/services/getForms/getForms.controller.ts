@@ -9,7 +9,7 @@ export class GetFormsController {
   constructor(
     private readonly formFieldSectionsService: FormFieldSectionsService,
     private readonly formFieldsService: FormFieldsService,
-  ) {}
+  ) { }
 
   @Get()
   async getForm(@Query() query: Record<string, any>) {
@@ -21,16 +21,14 @@ export class GetFormsController {
       deleted: {
         $ne: true,
       },
-      $paginate: false,
-    })) as FormFieldSections[];
+    }, { pagination: false })) as FormFieldSections[];
 
     const enrichedSections = await Promise.all(
       formFieldSections.map(async (section: FormFieldSections) => {
         const formFields = await this.formFieldsService._find({
           organization: new Types.ObjectId(organization),
           section: new Types.ObjectId(section._id as Types.ObjectId),
-          $paginate: false,
-        });
+        }, { pagination: false });
         return {
           // @ts-expect-error
           ...section.toObject(),
@@ -42,3 +40,4 @@ export class GetFormsController {
     return enrichedSections;
   }
 }
+
