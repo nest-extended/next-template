@@ -17,6 +17,8 @@ import { ListenerModule } from './listeners/listeners.module';
 import { FormFieldsModule } from './services/formFields/formFields.module';
 import { FormFieldSectionsModule } from './services/formFieldSections/formFieldSections.module';
 import { GetFormsModule } from './services/getForms/getForms.module';
+import { NestExtendedModule } from '@nest-extended/core/lib/nest-extended.module';
+import { ClsModule } from 'nestjs-cls';
 
 config();
 @Module({
@@ -24,6 +26,20 @@ config();
     ConfigModule.forRoot({
       envFilePath: ['.env'],
       isGlobal: true,
+    }),
+    ClsModule.forRoot({
+      global: true,
+      middleware: { mount: true },
+    }),
+    NestExtendedModule.forRoot({
+      softDelete: {
+        getQuery: () => ({ deleted: { $ne: true } }),
+        getData: (user) => ({
+          deleted: true,
+          deletedBy: user?._id,
+          deletedAt: new Date(),
+        }),
+      },
     }),
     AuthModule,
     EventEmitterModule.forRoot(),
@@ -50,4 +66,4 @@ config();
   ],
   controllers: [AppController],
 })
-export class AppModule { }
+export class AppModule {}
