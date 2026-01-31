@@ -12,21 +12,23 @@ export class AuthService {
   ) {}
 
   async signInLocal(email: string, pass: string): Promise<any> {
-    const [user] = (await this.usersService._find({
-      $paginate: false,
-      email,
-      $limit: 1,
-      $select: [
-        '_id',
-        'firstName',
-        'lastName',
-        'userName',
-        'email',
-        'password',
-        'createdAt',
-        'updatedAt',
-      ],
-    })) as Users[];
+    const [user] = (await this.usersService._find(
+      {
+        email,
+        $limit: 1,
+        $select: [
+          '_id',
+          'firstName',
+          'lastName',
+          'userName',
+          'email',
+          'password',
+          'createdAt',
+          'updatedAt',
+        ],
+      },
+      { pagination: false },
+    )) as Users[];
 
     if (!user) throw new UnauthorizedException();
 

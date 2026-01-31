@@ -15,22 +15,26 @@ export class GetFormsController {
   async getForm(@Query() query: Record<string, any>) {
     const { module = 'user', organization } = query || {};
 
-    const formFieldSections = (await this.formFieldSectionsService._find({
-      organization,
-      module,
-      deleted: {
-        $ne: true,
+    const formFieldSections = (await this.formFieldSectionsService._find(
+      {
+        organization,
+        module,
+        deleted: {
+          $ne: true,
+        },
       },
-      $paginate: false,
-    })) as FormFieldSections[];
+      { pagination: false },
+    )) as FormFieldSections[];
 
     const enrichedSections = await Promise.all(
       formFieldSections.map(async (section: FormFieldSections) => {
-        const formFields = await this.formFieldsService._find({
-          organization: new Types.ObjectId(organization),
-          section: new Types.ObjectId(section._id as Types.ObjectId),
-          $paginate: false,
-        });
+        const formFields = await this.formFieldsService._find(
+          {
+            organization: new Types.ObjectId(organization),
+            section: new Types.ObjectId(section._id as Types.ObjectId),
+          },
+          { pagination: false },
+        );
         return {
           // @ts-expect-error
           ...section.toObject(),
